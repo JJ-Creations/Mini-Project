@@ -1,47 +1,47 @@
 {
   "lr": {
-    "accuracy": 0.985,
-    "precision": 0.9772,
-    "recall": 0.9905,
-    "f1": 0.9838,
-    "roc_auc": 0.9992,
+    "accuracy": 0.9883,
+    "precision": 0.9846,
+    "recall": 0.9974,
+    "f1": 0.991,
+    "roc_auc": 0.9998,
     "confusion_matrix": [
       [
-        853,
-        17
+        209,
+        6
       ],
       [
-        7,
-        728
+        1,
+        384
       ]
     ]
   },
   "dt": {
-    "accuracy": 0.995,
-    "precision": 0.9932,
-    "recall": 0.9959,
-    "f1": 0.9946,
-    "roc_auc": 0.9988,
+    "accuracy": 0.9617,
+    "precision": 0.9689,
+    "recall": 0.9714,
+    "f1": 0.9702,
+    "roc_auc": 0.9684,
     "confusion_matrix": [
       [
-        865,
-        5
+        203,
+        12
       ],
       [
-        3,
-        732
+        11,
+        374
       ]
     ]
   },
   "cross_validation": {
-    "lr_cv_f1_mean": 0.984,
-    "lr_cv_f1_std": 0.0045,
-    "dt_cv_f1_mean": 0.9933,
-    "dt_cv_f1_std": 0.0022
+    "lr_cv_f1_mean": 0.9882,
+    "lr_cv_f1_std": 0.0028,
+    "dt_cv_f1_mean": 0.9757,
+    "dt_cv_f1_std": 0.0047
   },
-  "train_samples": 6416,
-  "test_samples": 1605,
-  "dataset_source": "HuggingFace (7521 samples) + Synthetic (500 samples)",
+  "train_samples": 2400,
+  "test_samples": 600,
+  "dataset_source": "Synthetic (3000 samples)",
   "features": [
     "in_resume",
     "in_github",
