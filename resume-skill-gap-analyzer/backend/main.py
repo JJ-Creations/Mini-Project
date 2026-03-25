@@ -1538,25 +1538,11 @@ async def export_candidates_csv(target_role: str = ""):
 # ---------------------------------------------------------------------------
 from fastapi.staticfiles import StaticFiles
 
-static_dir = os.path.join(os.path.dirname(__file__), "static")
+static_dir = os.path.join(os.path.dirname(__file__), "..", "static")
+static_dir = os.path.abspath(static_dir)
+
 if os.path.isdir(static_dir):
-    # Serve /assets (JS, CSS, images)
-    assets_dir = os.path.join(static_dir, "assets")
-    if os.path.isdir(assets_dir):
-        app.mount("/assets", StaticFiles(directory=assets_dir), name="static-assets")
-
-    from pathlib import Path as _Path
-    _static_root = _Path(static_dir).resolve()
-
-    @app.get("/{full_path:path}")
-    async def serve_frontend(full_path: str):
-        """Catch-all: serve index.html for React SPA routing."""
-        requested = (_static_root / full_path).resolve()
-        if requested.is_relative_to(_static_root) and requested.is_file():
-            return FileResponse(requested)
-        return FileResponse(_static_root / "index.html")
-
-
+    app.mount("/", StaticFiles(directory=static_dir, html=True), name="frontend")
 # ---------------------------------------------------------------------------
 #  Run with Uvicorn (if executed directly)
 # ---------------------------------------------------------------------------
