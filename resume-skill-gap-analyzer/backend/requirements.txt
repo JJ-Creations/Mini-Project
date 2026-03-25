@@ -1,0 +1,45 @@
+# Run: pip install -r requirements.txt
+# Then: python -m spacy download en_core_web_sm
+
+# --- Core Web Framework ---
+fastapi
+uvicorn
+python-multipart
+pydantic
+
+# --- ML & Data Science ---
+scikit-learn
+pandas
+numpy
+
+# --- NLP ---
+spacy
+
+# --- HTTP & Config ---
+httpx
+requests
+python-dotenv
+
+# --- PDF Parsing ---
+PyMuPDF
+
+# --- Model persistence ---
+joblib
+
+# --- Structured logging ---
+loguru
+
+# --- DOCX Support ---
+python-docx
+
+# --- LLM Integration (Groq) ---
+groq
+
+# --- Rate Limiting ---
+slowapi
+
+# --- HuggingFace Datasets (build-time data processing) ---
+datasets
+
+# --- Testing ---
+pytest

@@ -1,0 +1,279 @@
+/* ============================================
+   Batch Upload — Modernized
+   ============================================ */
+
+.batch-upload {
+  text-align: left;
+}
+
+.batch-upload h2 {
+  margin-top: 0;
+}
+
+.batch-desc {
+  color: var(--text-gray);
+  margin-bottom: var(--space-5);
+}
+
+.batch-form {
+  background: var(--card-bg);
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  margin-bottom: var(--space-6);
+  border: 1px solid var(--border-light);
+}
+
+/* --- Drag & Drop Zone --- */
+.batch-drop-zone {
+  width: 100%;
+  padding: var(--space-8) var(--space-5);
+  border: 2px dashed var(--border-light);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.2s, background 0.2s;
+  background: var(--surface-1);
+}
+
+.batch-drop-zone:hover,
+.batch-drop-zone.dragging {
+  border-color: var(--primary);
+  background: var(--primary-50);
+}
+
+.drop-zone-icon {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: var(--space-2);
+  color: var(--primary);
+  font-weight: bold;
+}
+
+.drop-zone-title {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.drop-zone-subtitle {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-gray);
+}
+
+/* --- File Queue --- */
+.file-queue {
+  margin-top: 14px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.file-queue-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) 14px;
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.file-count-badge {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.clear-all-btn {
+  background: none;
+  border: none;
+  color: #dc2626;
+  font-size: 0.82rem;
+  cursor: pointer;
+  font-weight: 600;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: background 0.15s;
+}
+
+.clear-all-btn:hover {
+  background: rgba(220, 38, 38, 0.08);
+}
+
+.file-list {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.file-list-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 14px;
+  border-bottom: 1px solid var(--surface-2);
+  font-size: 0.88rem;
+  transition: background 0.1s;
+}
+
+.file-list-item:last-child {
+  border-bottom: none;
+}
+
+.file-list-item:hover {
+  background: var(--surface-1);
+}
+
+.file-list-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.file-list-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.file-list-size {
+  color: var(--text-gray);
+  font-size: 0.78rem;
+  flex-shrink: 0;
+}
+
+.file-remove-btn {
+  background: none;
+  border: 1px solid transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.file-remove-btn:hover {
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.08);
+  border-color: rgba(220, 38, 38, 0.2);
+}
+
+/* --- Loading --- */
+.batch-loading {
+  text-align: center;
+  padding: var(--space-8);
+}
+
+.batch-loading .spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--border-light);
+  border-top: 4px solid var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto var(--space-3);
+}
+
+.batch-progress-bar {
+  width: 100%;
+  max-width: 300px;
+  height: 4px;
+  background: var(--surface-2);
+  border-radius: var(--radius-full);
+  margin: var(--space-3) auto 0;
+  overflow: hidden;
+}
+
+.batch-progress-fill {
+  height: 100%;
+  width: 30%;
+  background: var(--gradient-primary);
+  border-radius: var(--radius-full);
+  animation: progress-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes progress-pulse {
+  0% { width: 10%; margin-left: 0; }
+  50% { width: 40%; margin-left: 30%; }
+  100% { width: 10%; margin-left: 90%; }
+}
+
+/* --- Results --- */
+.batch-results {
+  margin-top: var(--space-6);
+}
+
+.batch-summary {
+  display: flex;
+  gap: var(--space-6);
+  padding: var(--space-4);
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+  align-items: center;
+  border: 1px solid var(--border-light);
+}
+
+.batch-stat {
+  font-size: 0.9rem;
+  color: var(--text-gray);
+}
+
+.batch-errors {
+  margin-top: var(--space-4);
+}
+
+/* --- AI Batch Report --- */
+.batch-ai-report {
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  margin-bottom: var(--space-4);
+  border: 1px solid var(--border-light);
+  border-left: 4px solid #10b981;
+  box-shadow: var(--shadow-md);
+}
+
+.batch-ai-report h4 {
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  color: var(--text-dark);
+}
+
+.pool-quality {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin-bottom: var(--space-3);
+}
+
+.quality-excellent { background: #d1fae5; color: #065f46; }
+.quality-good { background: #dbeafe; color: #1e40af; }
+.quality-fair { background: #fef3c7; color: #92400e; }
+.quality-weak { background: #fee2e2; color: #991b1b; }
+
+.pool-summary,
+.top-pick,
+.common-gaps,
+.hiring-advice {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin: 6px 0;
+  color: var(--text-dark);
+}
+
+.error-item {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-missing-bg);
+  color: #dc2626;
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+}

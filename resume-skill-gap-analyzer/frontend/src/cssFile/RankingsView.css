@@ -1,0 +1,69 @@
+/* ============================================
+   Rankings View — Modernized
+   ============================================ */
+
+.rankings-view {
+  text-align: left;
+}
+
+.rankings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-1);
+}
+
+.rankings-view h2 {
+  margin-top: 0;
+}
+
+.rankings-desc {
+  color: var(--text-gray);
+  margin-bottom: var(--space-5);
+}
+
+.role-selector {
+  max-width: 400px;
+  margin-bottom: var(--space-5);
+}
+
+.empty-state {
+  text-align: center;
+  padding: var(--space-10) var(--space-6);
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-light);
+}
+
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: var(--space-3);
+}
+
+.empty-state h3 {
+  margin: 0 0 var(--space-2);
+  font-size: 1.1rem;
+}
+
+.empty-state p {
+  color: var(--text-gray);
+  margin: 0;
+}
+
+.export-btn {
+  padding: var(--space-2) var(--space-4);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--gradient-primary);
+  color: #fff;
+  transition: opacity 0.2s, transform 0.15s;
+}
+
+.export-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
