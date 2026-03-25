@@ -16,6 +16,7 @@ function RoleSelector() {
         <p className="role-selector-subtitle">
           AI-powered recruiting platform for candidates and recruiters
         </p>
+        <p>An AI-powered recruiting and career intelligence platform designed to bridge the gap between talent and opportunity. Candidates can analyze their resumes, identify skill gaps, and receive personalized improvement suggestions aligned with industry demands. Recruiters can efficiently evaluate, compare, and rank candidates using data-driven insights from resumes and GitHub profiles, enabling faster and smarter hiring decisions.</p>
 
         <div className="role-cards">
           <button
@@ -70,11 +71,11 @@ function RoleSelector() {
           <h2>Description</h2>
           <div className="candidate-description">
             <h3 className="description-header">Candidate</h3>
-            <p>Build a stronger profile, improve your resume, and prepare for interviews with AI-powered insights tailored to your career goals.</p>
+            <p>Build a stronger professional profile with AI-driven insights. Analyze your resume, identify missing skills, and receive personalized recommendations to improve your chances for specific job roles. Get actionable feedback based on real industry requirements and GitHub activity.</p>
           </div>
           <div className="recruiter-description">
             <h3 className="description-header">Recruiter</h3>
-            <p>Analyze resumes at large-scale, compare candidates, and make smarter hiring decisions with data-driven insights.</p>
+            <p>Streamline hiring with intelligent candidate analysis. Automatically extract skills from resumes, evaluate GitHub projects, and compare applicants using machine learning models. Make faster, data-driven hiring decisions with clear, explainable insights.</p>
           </div>
         </div>
       </div>
