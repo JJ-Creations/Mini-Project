@@ -16,7 +16,7 @@ function RoleSelector() {
         <p className="role-selector-subtitle">
           AI-powered recruiting platform for candidates and recruiters
         </p>
-        <p>An AI-powered recruiting and career intelligence platform designed to bridge the gap between talent and opportunity. Candidates can analyze their resumes, identify skill gaps, and receive personalized improvement suggestions aligned with industry demands. Recruiters can efficiently evaluate, compare, and rank candidates using data-driven insights from resumes and GitHub profiles, enabling faster and smarter hiring decisions.</p>
+        <p className="role-selector-startup">An AI-powered recruiting and career intelligence platform designed to bridge the gap between talent and opportunity. Candidates can analyze their resumes, identify skill gaps, and receive personalized improvement suggestions aligned with industry demands. Recruiters can efficiently evaluate, compare, and rank candidates using data-driven insights from resumes and GitHub profiles, enabling faster and smarter hiring decisions.</p>
 
         <div className="role-cards">
           <button
