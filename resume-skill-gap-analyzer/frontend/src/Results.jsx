@@ -4,6 +4,7 @@ import ScoreCard from "./ScoreCard";
 import Summary from "./Summary";
 import SkillTable from "./SkillTable";
 import SkillRadarChart from "./SkillRadarChart";
+import CodeQualityResults from "./CodeQualityResults";
 import { showToast } from "./Toast";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
@@ -106,7 +107,7 @@ const Results = memo(function Results({ report }) {
             Status: s.status,
             "In Resume": s.in_resume ? "Yes" : "No",
             "On GitHub": s.in_github ? "Yes" : "No",
-            "ML Confidence": s.probability != null ? `${Math.round(s.probability * 100)}%` : "N/A",
+            "Evidence Strength": s.evidence_strength != null ? `${Math.round(s.evidence_strength)}%` : s.probability != null ? `${Math.round(s.probability * 100)}%` : "N/A",
             Category: s.category || "required",
         }));
 
@@ -580,6 +581,14 @@ const Results = memo(function Results({ report }) {
                         )}
                     </div>
                 </div>
+
+                {/* GitHub Code Quality Analysis */}
+                {report.github_code_quality && report.github_code_quality.overall_score && (
+                    <CodeQualityResults
+                        scores={report.github_code_quality}
+                        title="GitHub Code Quality Analysis"
+                    />
+                )}
             </section>
         </>
     );

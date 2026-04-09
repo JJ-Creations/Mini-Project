@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
+import { useUserRole } from "./UserRoleContext";
+import NotAuthorized from "./NotAuthorized";
 import Role from "./Role";
 import "./cssFile/CompareView.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 function CompareView() {
+  const { userRole } = useUserRole();
   const [candidates, setCandidates] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
   const [targetRole, setTargetRole] = useState("");
@@ -61,6 +64,10 @@ function CompareView() {
       setLoading(false);
     }
   };
+
+  if (userRole !== "recruiter") {
+    return <NotAuthorized message="Recruiter access required" />;
+  }
 
   return (
     <div className="compare-view">
@@ -180,6 +187,7 @@ function statusIcon(status) {
     case "strong": return "✔✔";
     case "claimed_only": return "✔";
     case "demonstrated_only": return "⚙";
+    case "unclaimed": return "◈";
     case "missing": return "✘";
     default: return "?";
   }

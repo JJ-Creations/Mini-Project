@@ -1,11 +1,12 @@
 import "./cssFile/App.css";
-import { useState, useCallback, useEffect, lazy, Suspense } from "react";
+import { useState, useCallback, useEffect, useRef, lazy, Suspense } from "react";
 import { useUserRole } from "./UserRoleContext";
 import { getVisibleTabs } from "./TabNav";
 import TabNav from "./TabNav";
 import RoleSelector from "./RoleSelector";
 import InputSection from "./InputSection";
 import Results from "./Results";
+import CodeChallenge from "./CodeChallenge";
 import AnalysisHistory from "./AnalysisHistory";
 import ToastContainer from "./Toast";
 import ErrorBoundary from "./ErrorBoundary";
@@ -25,15 +26,23 @@ const TabFallback = () => (
 function App() {
   const { userRole } = useUserRole();
 
-  const [activeTab, setActiveTab] = useState(
-    () => localStorage.getItem("activeTab") || "analyze"
-  );
+  const [activeTab, setActiveTab] = useState(() => {
+    // Read userRole directly from localStorage so the initializer
+    // can pick up the correct per-role stored tab on first render.
+    const role = localStorage.getItem("userRole");
+    if (role) {
+      return localStorage.getItem(`activeTab_${role}`) || "analyze";
+    }
+    return "analyze";
+  });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState(null);
   const [currentAnalysisId, setCurrentAnalysisId] = useState(null);
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
-  const [historyOpen, setHistoryOpen] = useState(true);
+
+  // Track the last non-null role to detect actual role switches
+  const lastRoleRef = useRef(null);
 
   // Dark mode state
   const [darkMode, setDarkMode] = useState(
@@ -50,10 +59,36 @@ function App() {
     setDarkMode((d) => !d);
   }, []);
 
-  // Persist activeTab to localStorage
+  // Persist activeTab per-role (candidate / recruiter get separate keys)
   useEffect(() => {
-    localStorage.setItem("activeTab", activeTab);
-  }, [activeTab]);
+    if (!userRole) return;
+    localStorage.setItem(`activeTab_${userRole}`, activeTab);
+  }, [activeTab, userRole]);
+
+  // Reset view state and restore per-role tab when switching roles
+  useEffect(() => {
+    if (!userRole) return;
+    const stored = localStorage.getItem(`activeTab_${userRole}`);
+    setActiveTab(stored || "analyze");
+    setReport(null);
+    setCurrentAnalysisId(null);
+    setError("");
+    setLoading(false);
+  }, [userRole]);
+
+  // Reset view state when role actually switches (candidate ↔ recruiter)
+  useEffect(() => {
+    if (userRole) {
+      if (lastRoleRef.current !== null && lastRoleRef.current !== userRole) {
+        setActiveTab("analyze");
+        setReport(null);
+        setCurrentAnalysisId(null);
+        setError("");
+        setLoading(false);
+      }
+      lastRoleRef.current = userRole;
+    }
+  }, [userRole]);
 
   // Guard: if current activeTab isn't visible for this role, reset to "analyze"
   useEffect(() => {
@@ -115,7 +150,6 @@ function App() {
     if (newReport?.analysis_id) {
       setCurrentAnalysisId(newReport.analysis_id);
     }
-    // Trigger history sidebar refresh
     setHistoryRefreshKey((k) => k + 1);
   }, []);
 
@@ -127,14 +161,6 @@ function App() {
     setError("");
   }, []);
 
-  // Called when user clicks "New Analysis"
-  const handleNewAnalysis = useCallback(() => {
-    setReport(null);
-    setCurrentAnalysisId(null);
-    setError("");
-    setActiveTab("analyze");
-  }, []);
-
   // Show role selector if no role chosen
   if (!userRole) {
     return <RoleSelector />;
@@ -142,89 +168,85 @@ function App() {
 
   return (
     <>
-      <header className="app-header">
-        <div className="container header-row">
-          <div>
-            <div className="brand-mark">
-              <span className="brand-icon">{"\u25C6"}</span>
-              <span className="brand-name">SkillSync</span>
-            </div>
-            <p className="app-subtitle">
-              AI-Powered Recruiting Platform — Analyze resumes, rank candidates, and discover skill gaps instantly.
-            </p>
-          </div>
-          <button
-            className="theme-toggle-btn"
-            onClick={toggleDarkMode}
-            title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-          >
-            {darkMode ? "\u2600\uFE0F" : "\uD83C\uDF19"}
-          </button>
-        </div>
-      </header>
+      <TabNav
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        darkMode={darkMode}
+        toggleDarkMode={toggleDarkMode}
+      />
 
-      <TabNav activeTab={activeTab} onTabChange={setActiveTab} />
+      <main className="container main-content">
+        {activeTab === "analyze" && (
+          <>
+            <section className="input-section">
+              <ErrorBoundary>
+                <InputSection
+                  onError={setError}
+                  onAnalyze={setLoading}
+                  obtainedReport={handleReportReceived}
+                />
+              </ErrorBoundary>
+            </section>
+            {error && <div className="error-message">{error}</div>}
+            {loading && (
+              <div className="loading-overlay">
+                <div className="spinner-container">
+                  <div className="spinner"></div>
+                  <p className="loading-text">Analyzing your profile...</p>
+                  <p className="loading-subtext">Parsing resume...</p>
+                </div>
+              </div>
+            )}
+            {report && (
+              <ErrorBoundary>
+                <Results report={report} />
+              </ErrorBoundary>
+            )}
+            {report && userRole === "candidate" && (
+              <ErrorBoundary>
+                <CodeChallenge
+                  targetRole={report.target_role}
+                  candidateId={report.candidate_id}
+                  analysisId={report.analysis_id}
+                />
+              </ErrorBoundary>
+            )}
+          </>
+        )}
 
-      <div className="app-layout">
         <ErrorBoundary>
-          <AnalysisHistory
-            refreshKey={historyRefreshKey}
-            activeAnalysisId={currentAnalysisId}
-            onSelect={handleHistorySelect}
-            onNewAnalysis={handleNewAnalysis}
-            isOpen={historyOpen}
-            onToggle={() => setHistoryOpen((o) => !o)}
-          />
+          <Suspense fallback={<TabFallback />}>
+            {activeTab === "batch" && <BatchUpload />}
+            {activeTab === "candidates" && <CandidatesList />}
+            {activeTab === "rankings" && <RankingsView />}
+            {activeTab === "compare" && <CompareView />}
+            {activeTab === "jd-parser" && <JDParser />}
+            {activeTab === "dashboard" && <DashboardStats />}
+          </Suspense>
         </ErrorBoundary>
 
-        <main className={`container main-content ${historyOpen ? "with-sidebar" : ""}`}>
-          {activeTab === "analyze" && (
-            <>
-              <section className="input-section">
-                <ErrorBoundary>
-                  <InputSection
-                    onError={setError}
-                    onAnalyze={setLoading}
-                    obtainedReport={handleReportReceived}
-                  />
-                </ErrorBoundary>
-              </section>
-              {error && <div className="error-message">{error}</div>}
-              {loading && (
-                <div className="loading-overlay">
-                  <div className="spinner-container">
-                    <div className="spinner"></div>
-                    <p className="loading-text">Analyzing your profile...</p>
-                    <p className="loading-subtext">Parsing resume...</p>
-                  </div>
-                </div>
-              )}
-              {report && (
-                <ErrorBoundary>
-                  <Results report={report} />
-                </ErrorBoundary>
-              )}
-            </>
-          )}
-
+        {activeTab === "history" && (
           <ErrorBoundary>
-            <Suspense fallback={<TabFallback />}>
-              {activeTab === "batch" && <BatchUpload />}
-              {activeTab === "candidates" && <CandidatesList />}
-              {activeTab === "rankings" && <RankingsView />}
-              {activeTab === "compare" && <CompareView />}
-              {activeTab === "jd-parser" && <JDParser />}
-              {activeTab === "dashboard" && <DashboardStats />}
-            </Suspense>
+            <AnalysisHistory
+              refreshKey={historyRefreshKey}
+              activeAnalysisId={currentAnalysisId}
+              onSelect={handleHistorySelect}
+              onNewAnalysis={() => {
+                setReport(null);
+                setCurrentAnalysisId(null);
+                setError("");
+                setActiveTab("analyze");
+              }}
+            />
           </ErrorBoundary>
-        </main>
-      </div>
+        )}
+      </main>
 
       <footer className="app-footer">
         <div className="container">
           <p>Automated Recruiting Platform &mdash; Powered by FastAPI, Scikit-learn &amp; spaCy</p>
           <p className="shortcuts-hint">
-            Shortcuts: Alt+1-{getVisibleTabs(userRole).length} tabs | Alt+N new | Alt+D dark mode | Esc clear | Ctrl+Enter submit
+            Shortcuts: Alt+1-{getVisibleTabs(userRole).length} tabs | Alt+N new | Alt+D dark mode | Esc clear
           </p>
         </div>
       </footer>

@@ -1,13 +1,43 @@
-# HuggingFace cache
+# 🔥 HuggingFace / ML cache
 resume-skill-gap-analyzer/backend/datasets/
-# Python
+*.cache/
+.cache/
+huggingface/
+
+# 🐍 Python
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
+*.pyd
 .env
+venv/
+.venv/
+env/
+
+# 📦 Node.js
 node_modules/
 package-lock.json
-# Database
+npm-debug.log*
+yarn-error.log*
+
+# 🏗️ Build output
+dist/
+build/
+*.egg-info/
+
+# 🗄️ Database
 *.db
-# IDE
+*.sqlite3
+
+# 🧠 Logs
+*.log
+
+# 💻 IDE / Editor
 .vscode/
 .idea/
+*.swp
+*.swo
+
+# 🖥️ OS files
+.DS_Store
+Thumbs.db

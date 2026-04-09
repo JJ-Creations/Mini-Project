@@ -12,11 +12,10 @@ function RoleSelector() {
           <span className="role-brand-icon">{"\u25C6"}</span>
           <span className="role-brand-name">SkillSync</span>
         </div>
-        <h1 className="role-selector-title">Hire Smarter. Get Hired Faster.</h1>
+        <h1 className="role-selector-title">Welcome to SkillSync</h1>
         <p className="role-selector-subtitle">
-          AI-powered recruiting platform for candidates and recruiters
+          AI-Powered Recruiting Platform &mdash; Choose how you'd like to use SkillSync
         </p>
-        <p className="role-selector-startup">An AI-powered recruiting and career intelligence platform designed to bridge the gap between talent and opportunity. Candidates can analyze their resumes, identify skill gaps, and receive personalized improvement suggestions aligned with industry demands. Recruiters can efficiently evaluate, compare, and rank candidates using data-driven insights from resumes and GitHub profiles, enabling faster and smarter hiring decisions.</p>
 
         <div className="role-cards">
           <button
@@ -29,7 +28,7 @@ function RoleSelector() {
                 <circle cx="12" cy="7" r="4" />
               </svg>
             </div>
-            <h2 className="role-card-title">🚀 Get Hired</h2>
+            <h2 className="role-card-title">I'm a Candidate</h2>
             <p className="role-card-desc">
               Analyze your resume, get AI coaching, interview prep, and personalized learning paths
             </p>
@@ -54,7 +53,7 @@ function RoleSelector() {
                 <path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
             </div>
-            <h2 className="role-card-title">🎯 Hire Talent</h2>
+            <h2 className="role-card-title">I'm a Recruiter</h2>
             <p className="role-card-desc">
               Evaluate candidates, batch analyze resumes, rank talent, and get hiring insights
             </p>
@@ -66,17 +65,6 @@ function RoleSelector() {
             </ul>
             <span className="role-card-cta">Continue as Recruiter</span>
           </button>
-        </div>
-        <div className="role-selector-description">
-          <h2>Description</h2>
-          <div className="candidate-description">
-            <h3 className="description-header">Candidate</h3>
-            <p>Build a stronger professional profile with AI-driven insights. Analyze your resume, identify missing skills, and receive personalized recommendations to improve your chances for specific job roles. Get actionable feedback based on real industry requirements and GitHub activity.</p>
-          </div>
-          <div className="recruiter-description">
-            <h3 className="description-header">Recruiter</h3>
-            <p>Streamline hiring with intelligent candidate analysis. Automatically extract skills from resumes, evaluate GitHub projects, and compare applicants using machine learning models. Make faster, data-driven hiring decisions with clear, explainable insights.</p>
-          </div>
         </div>
       </div>
     </div>

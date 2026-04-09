@@ -53,6 +53,13 @@ from modules.groq_llm import (
     generate_culture_fit_analysis,
     generate_skill_credibility_assessment,
     generate_role_fit_narrative,
+    analyze_code_quality_llm,
+)
+from modules.code_quality_analyzer import (
+    analyze_code_quality,
+    analyze_code_batch,
+    is_code_file,
+    detect_language,
 )
 from modules.web_search import (
     is_available as serper_available,
@@ -276,7 +283,9 @@ async def _run_single_analysis(
 
     if github_username:
         try:
-            github_result = await state.github_analyzer.analyze_github_profile(github_username, state.skills_master)
+            github_result = await state.github_analyzer.analyze_github_profile(
+                github_username, state.skills_master, analyze_code=True,
+            )
             demonstrated_skills = github_result["demonstrated_skills"]
         except Exception as e:
             github_result["error"] = str(e)
@@ -312,6 +321,10 @@ async def _run_single_analysis(
     predictions = state.ml_model.predict(X)
     ensemble_probabilities = predictions["ensemble_probabilities"]
 
+    # Extract code quality score from GitHub analysis (if available)
+    github_cq = github_result.get("code_quality", {})
+    cq_score = github_cq.get("overall_score") if github_cq else None
+
     # Skill gap analysis
     analysis = state.skill_gap_analyzer.analyze(
         claimed_skills=claimed_skills,
@@ -321,6 +334,7 @@ async def _run_single_analysis(
         ml_predictions=predictions,
         probabilities=ensemble_probabilities,
         skill_matrix=skill_matrix,
+        code_quality_score=cq_score,
     )
 
     # Report
@@ -340,6 +354,10 @@ async def _run_single_analysis(
 
     if github_result.get("commit_activity"):
         report["github_insights"]["commit_activity"] = github_result["commit_activity"]
+
+    # Include GitHub code quality analysis in report
+    if github_result.get("code_quality"):
+        report["github_code_quality"] = github_result["code_quality"]
 
     # --- Groq LLM-powered enhancements (optional, runs only if GROQ_API_KEY is set) ---
     if groq_available():
@@ -582,6 +600,12 @@ async def analyze(
     claimed_skills = resume_result["extracted_skills"]
     personal_info = resume_result.get("personal_info", {})
 
+    logger.info(f"RESUME PARSED | Skills extracted: {len(claimed_skills)} | "
+                f"Text length: {len(resume_result.get('raw_text', ''))} chars")
+    if len(claimed_skills) == 0:
+        logger.warning(f"[SCORE_DEBUG] Zero skills extracted from resume '{filename}'. "
+                       f"Text preview: {resume_result.get('raw_text', '')[:200]!r}")
+
     # Auto-detect GitHub from resume if not provided
     if not github_username and personal_info.get("github_username"):
         github_username = personal_info["github_username"]
@@ -706,10 +730,12 @@ async def analyze_batch(
     request: Request,
     resume_files: List[UploadFile] = File(...),
     target_role: str = Form(...),
+    code_files: Optional[List[UploadFile]] = File(None),
 ):
     """
     Analyze multiple resumes at once. Returns a ranked list of candidates.
     GitHub usernames are auto-extracted from resume content.
+    Optionally accepts code files for code quality analysis.
     """
     if target_role not in state.job_roles_data:
         raise HTTPException(400, f"Unknown role: '{target_role}'.")
@@ -812,6 +838,31 @@ async def analyze_batch(
 
     logger.info(f"Batch complete! {len(results)} analyzed, {len(errors)} errors")
 
+    # Analyze code files if provided
+    batch_code_quality = None
+    if code_files:
+        code_files_data = []
+        for cf in code_files:
+            cf_name = cf.filename or "unknown"
+            if is_code_file(cf_name):
+                try:
+                    cf_bytes = await cf.read()
+                    if 0 < len(cf_bytes) <= 1 * 1024 * 1024:
+                        content = cf_bytes.decode("utf-8", errors="ignore")
+                        language = detect_language(cf_name)
+                        code_files_data.append({
+                            "filename": cf_name,
+                            "content": content,
+                            "language": language,
+                        })
+                except Exception as e:
+                    logger.warning(f"[Batch] Code file read error for {cf_name}: {e}")
+
+        if code_files_data:
+            batch_code_quality = analyze_code_batch(code_files_data, context="uploaded")
+            if batch_code_quality:
+                logger.info(f"[Batch] Analyzed {len(code_files_data)} code files for quality")
+
     # AI-powered batch executive report for recruiters
     ai_batch_report = None
     if groq_available() and results:
@@ -831,6 +882,8 @@ async def analyze_batch(
     }
     if ai_batch_report:
         response["ai_executive_report"] = ai_batch_report
+    if batch_code_quality:
+        response["code_quality"] = batch_code_quality
 
     return response
 
@@ -1088,6 +1141,246 @@ async def get_analysis_detail(analysis_id: int):
     report["candidate_id"] = analysis["candidate_id"]
     report["analysis_id"] = analysis["id"]
     return report
+
+
+# ---------------------------------------------------------------------------
+#  ENDPOINT: Code Challenge — Get a coding problem
+# ---------------------------------------------------------------------------
+@app.get("/code-challenge")
+async def get_code_challenge(target_role: str = ""):
+    """Return a random coding challenge, optionally filtered by target role."""
+    import random
+
+    data_dir = os.path.join(os.path.dirname(__file__), "data")
+    challenges_path = os.path.join(data_dir, "code_challenges.json")
+
+    if not os.path.exists(challenges_path):
+        raise HTTPException(500, "Code challenges data not found.")
+
+    with open(challenges_path, "r") as f:
+        challenges = json.load(f)
+
+    if not challenges:
+        raise HTTPException(500, "No code challenges available.")
+
+    # Filter by role if provided
+    if target_role:
+        role_matches = [c for c in challenges if target_role in c.get("role_tags", [])]
+        if role_matches:
+            challenges = role_matches
+
+    challenge = random.choice(challenges)
+    return challenge
+
+
+# ---------------------------------------------------------------------------
+#  ENDPOINT: Code Challenge Submit — Analyze submitted code
+# ---------------------------------------------------------------------------
+class CodeSubmitRequest(BaseModel):
+    code: str = Field(max_length=50_000)
+    language: str = Field(default="Python", max_length=50)
+    challenge_id: str = Field(max_length=100)
+    candidate_id: Optional[int] = None
+    analysis_id: Optional[int] = None
+
+
+@app.post("/code-challenge/submit")
+@limiter.limit("5/minute")
+async def submit_code_challenge(request: Request, body: CodeSubmitRequest):
+    """Analyze submitted code for a coding challenge."""
+    if not body.code.strip():
+        raise HTTPException(400, "Code cannot be empty.")
+
+    # Load challenge description for context
+    data_dir = os.path.join(os.path.dirname(__file__), "data")
+    challenges_path = os.path.join(data_dir, "code_challenges.json")
+    challenge_description = ""
+
+    if os.path.exists(challenges_path):
+        with open(challenges_path, "r") as f:
+            challenges = json.load(f)
+        for c in challenges:
+            if c.get("id") == body.challenge_id:
+                challenge_description = c.get("description", "")
+                break
+
+    # Analyze code quality
+    quality_result = analyze_code_quality(
+        code=body.code,
+        language=body.language,
+        context="challenge",
+        challenge_description=challenge_description,
+    )
+
+    if not quality_result:
+        # Fallback: basic response if LLM unavailable
+        quality_result = {
+            "speed": {"score": 5, "notes": "LLM analysis unavailable"},
+            "complexity": {"score": 5, "notes": "LLM analysis unavailable"},
+            "flexibility": {"score": 5, "notes": "LLM analysis unavailable"},
+            "code_quality": {"score": 5, "notes": "LLM analysis unavailable"},
+            "best_practices": {"score": 5, "notes": "LLM analysis unavailable"},
+            "overall_score": 5.0,
+            "summary": "Code quality analysis requires LLM integration (set GROQ_API_KEY).",
+            "source": "challenge",
+        }
+
+    # Save to database if candidate_id provided
+    submission_id = None
+    if body.candidate_id:
+        submission_id = state.db.insert_code_submission({
+            "candidate_id": body.candidate_id,
+            "analysis_id": body.analysis_id,
+            "challenge_id": body.challenge_id,
+            "language": body.language,
+            "submitted_code": body.code,
+            "code_quality": quality_result,
+        })
+
+        # Update analysis record with code quality
+        if body.analysis_id:
+            state.db.update_analysis_code_quality(body.analysis_id, quality_result)
+
+    logger.info(f"[CodeChallenge] Submission analyzed — overall: {quality_result.get('overall_score', 0)}/10")
+
+    return {
+        "submission_id": submission_id,
+        "challenge_id": body.challenge_id,
+        "language": body.language,
+        "code_quality": quality_result,
+    }
+
+
+# ---------------------------------------------------------------------------
+#  ENDPOINTS: Function-only Code Challenge Runner (LeetCode-style)
+# ---------------------------------------------------------------------------
+from modules.challenge_runner import (
+    list_problems as _cr_list_problems,
+    problem_detail as _cr_problem_detail,
+    run_challenge as _cr_run_challenge,
+)
+
+
+@app.get("/challenge/problems")
+async def challenge_list_problems():
+    """Return list of available problems (id, title, difficulty)."""
+    try:
+        return _cr_list_problems()
+    except Exception as exc:
+        logger.exception("challenge_list_problems failed: %s", exc)
+        raise HTTPException(500, "Failed to load problem list.")
+
+
+@app.get("/challenge/problem/{problem_id}")
+async def challenge_get_problem(problem_id: str):
+    """Return problem detail (without hidden tests)."""
+    try:
+        return _cr_problem_detail(problem_id)
+    except FileNotFoundError:
+        raise HTTPException(404, f"Problem '{problem_id}' not found.")
+    except Exception as exc:
+        logger.exception("challenge_get_problem failed for '%s': %s", problem_id, exc)
+        raise HTTPException(500, "Failed to load problem detail.")
+
+
+class ChallengeSubmitRequest(BaseModel):
+    problem_id: str = Field(max_length=100)
+    language: str = Field(max_length=20)
+    code: str = Field(max_length=100_000)
+    mode: str = Field(default="sample", max_length=10)
+
+
+@app.post("/challenge/submit")
+@limiter.limit("10/minute")
+async def challenge_submit(request: Request, body: ChallengeSubmitRequest):
+    """
+    Run a function-only code submission against test cases.
+
+    mode='sample' runs only the sample tests (safe to expose result).
+    mode='all'    runs all tests including hidden ones.
+    """
+    if body.mode not in ("sample", "all"):
+        raise HTTPException(400, "mode must be 'sample' or 'all'.")
+    if not body.code.strip():
+        raise HTTPException(400, "code cannot be empty.")
+
+    result = _cr_run_challenge(
+        problem_id=body.problem_id,
+        language=body.language,
+        user_code=body.code,
+        mode=body.mode,
+    )
+    logger.info(
+        f"[ChallengeSubmit] problem={body.problem_id} lang={body.language} "
+        f"mode={body.mode} verdict={result['verdict']} "
+        f"passed={result['passed']}/{result['total']}"
+    )
+    return result
+
+
+# ---------------------------------------------------------------------------
+#  ENDPOINT: Analyze Code Files (Recruiter batch code quality)
+# ---------------------------------------------------------------------------
+@app.post("/analyze-code-files")
+@limiter.limit("5/minute")
+async def analyze_code_files(
+    request: Request,
+    code_files: List[UploadFile] = File(...),
+):
+    """Analyze uploaded code files for quality metrics."""
+    if len(code_files) > 20:
+        raise HTTPException(400, "Maximum 20 code files per request.")
+
+    files_data = []
+    errors = []
+
+    for f in code_files:
+        filename = f.filename or "unknown"
+        if not is_code_file(filename):
+            errors.append({"file": filename, "error": "Unsupported file type"})
+            continue
+
+        try:
+            content_bytes = await f.read()
+            if len(content_bytes) > 1 * 1024 * 1024:  # 1 MB limit per file
+                errors.append({"file": filename, "error": "File too large (max 1 MB)"})
+                continue
+            if len(content_bytes) == 0:
+                errors.append({"file": filename, "error": "File is empty"})
+                continue
+
+            content = content_bytes.decode("utf-8", errors="ignore")
+            language = detect_language(filename)
+            files_data.append({
+                "filename": filename,
+                "content": content,
+                "language": language,
+            })
+        except Exception as e:
+            errors.append({"file": filename, "error": str(e)})
+
+    if not files_data:
+        return {"results": None, "errors": errors, "message": "No valid code files to analyze."}
+
+    # Analyze all files
+    batch_result = analyze_code_batch(files_data, context="uploaded")
+
+    if not batch_result:
+        return {
+            "results": None,
+            "errors": errors,
+            "message": "Code quality analysis requires LLM integration (set GROQ_API_KEY).",
+        }
+
+    logger.info(f"[CodeFiles] Analyzed {len(files_data)} files — "
+                f"overall: {batch_result['aggregate'].get('overall_score', 0)}/10")
+
+    return {
+        "results": batch_result,
+        "total_files": len(files_data),
+        "total_errors": len(errors),
+        "errors": errors,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -1539,9 +1832,24 @@ async def export_candidates_csv(target_role: str = ""):
 from fastapi.staticfiles import StaticFiles
 
 static_dir = os.path.join(os.path.dirname(__file__), "static")
-
 if os.path.isdir(static_dir):
-    app.mount("/", StaticFiles(directory=static_dir, html=True), name="frontend")
+    # Serve /assets (JS, CSS, images)
+    assets_dir = os.path.join(static_dir, "assets")
+    if os.path.isdir(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="static-assets")
+
+    from pathlib import Path as _Path
+    _static_root = _Path(static_dir).resolve()
+
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        """Catch-all: serve index.html for React SPA routing."""
+        requested = (_static_root / full_path).resolve()
+        if requested.is_relative_to(_static_root) and requested.is_file():
+            return FileResponse(requested)
+        return FileResponse(_static_root / "index.html")
+
+
 # ---------------------------------------------------------------------------
 #  Run with Uvicorn (if executed directly)
 # ---------------------------------------------------------------------------

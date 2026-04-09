@@ -1,6 +1,9 @@
 import { useState, useRef, useCallback } from "react";
+import { useUserRole } from "./UserRoleContext";
+import NotAuthorized from "./NotAuthorized";
 import Role from "./Role";
 import RankingTable from "./RankingTable";
+import CodeQualityResults from "./CodeQualityResults";
 import Papa from "papaparse";
 import { showToast } from "./Toast";
 import "./cssFile/BatchUpload.css";
@@ -14,15 +17,20 @@ function formatFileSize(bytes) {
 }
 
 function BatchUpload() {
+  const { userRole } = useUserRole();
   const [files, setFiles] = useState([]);
   const [targetRole, setTargetRole] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   const [isDragging, setIsDragging] = useState(false);
+  const [codeFiles, setCodeFiles] = useState([]);
+  const [isCodeDragging, setIsCodeDragging] = useState(false);
   const fileInputRef = useRef(null);
+  const codeFileInputRef = useRef(null);
 
   const validExtensions = [".pdf", ".txt", ".docx"];
+  const codeExtensions = [".py", ".js", ".ts", ".jsx", ".tsx", ".java", ".go", ".rs", ".cpp", ".c", ".rb", ".php", ".kt", ".swift"];
 
   const validateFiles = (fileList) => {
     const valid = [];
@@ -77,6 +85,47 @@ function BatchUpload() {
     e.target.value = "";
   };
 
+  // Code files handlers
+  const addCodeFiles = useCallback((newFileList) => {
+    const arr = Array.from(newFileList);
+    const valid = [];
+    const invalid = [];
+    for (const f of arr) {
+      const dotIdx = f.name.lastIndexOf(".");
+      const ext = dotIdx >= 0 ? f.name.toLowerCase().slice(dotIdx) : "";
+      if (codeExtensions.includes(ext)) {
+        valid.push(f);
+      } else {
+        invalid.push(f.name);
+      }
+    }
+    if (invalid.length > 0) {
+      showToast(`${invalid.length} non-code file(s) skipped`, "info");
+    }
+    if (valid.length === 0) return;
+    setCodeFiles((prev) => {
+      const existing = new Set(prev.map((f) => `${f.name}_${f.size}`));
+      const unique = valid.filter((f) => !existing.has(`${f.name}_${f.size}`));
+      if (unique.length > 0) showToast(`${unique.length} code file(s) added`, "success");
+      return [...prev, ...unique].slice(0, 20);
+    });
+  }, []);
+
+  const handleCodeFilesChange = (e) => {
+    addCodeFiles(e.target.files);
+    e.target.value = "";
+  };
+
+  const removeCodeFile = (index) => {
+    setCodeFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleCodeDrop = (e) => {
+    e.preventDefault();
+    setIsCodeDragging(false);
+    addCodeFiles(e.dataTransfer.files);
+  };
+
   const removeFile = (index) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
   };
@@ -84,6 +133,13 @@ function BatchUpload() {
   const clearAllFiles = () => {
     setFiles([]);
     setError("");
+  };
+
+  const clearResults = () => {
+    setResult(null);
+    setError("");
+    setFiles([]);
+    setCodeFiles([]);
   };
 
   // Drag & drop handlers
@@ -114,6 +170,7 @@ function BatchUpload() {
     const formData = new FormData();
     files.forEach((f) => formData.append("resume_files", f));
     formData.append("target_role", targetRole);
+    codeFiles.forEach((f) => formData.append("code_files", f));
 
     try {
       const res = await fetch(`${API_BASE_URL}/analyze-batch`, {
@@ -134,6 +191,10 @@ function BatchUpload() {
   };
 
   const totalSize = files.reduce((sum, f) => sum + f.size, 0);
+
+  if (userRole !== "recruiter") {
+    return <NotAuthorized message="Recruiter access required" />;
+  }
 
   return (
     <div className="batch-upload">
@@ -206,6 +267,64 @@ function BatchUpload() {
 
         <Role onTargetSet={setTargetRole} />
 
+        {/* Code Files Upload Section */}
+        <div className="form-group">
+          <label className="form-label">Code Files (Optional)</label>
+          <p className="batch-code-desc">Upload code files to analyze coding quality for candidates in this batch.</p>
+          <div
+            className={`batch-drop-zone batch-code-drop-zone ${isCodeDragging ? "dragging" : ""}`}
+            onDrop={handleCodeDrop}
+            onDragOver={(e) => { e.preventDefault(); setIsCodeDragging(true); }}
+            onDragLeave={() => setIsCodeDragging(false)}
+            onClick={() => codeFileInputRef.current?.click()}
+            role="button"
+            tabIndex={0}
+          >
+            <span className="drop-zone-icon">&lt;/&gt;</span>
+            <p className="drop-zone-title">
+              <strong>Drag & drop code files here</strong>
+            </p>
+            <p className="drop-zone-subtitle">
+              .py, .js, .ts, .java, .go, .rs, .cpp, .rb — max 20 files
+            </p>
+          </div>
+          <input
+            type="file"
+            multiple
+            accept=".py,.js,.ts,.jsx,.tsx,.java,.go,.rs,.cpp,.c,.rb,.php,.kt,.swift"
+            onChange={handleCodeFilesChange}
+            ref={codeFileInputRef}
+            hidden
+          />
+          {codeFiles.length > 0 && (
+            <div className="file-queue">
+              <div className="file-queue-header">
+                <span className="file-count-badge">{codeFiles.length} code file(s)</span>
+                <button type="button" className="clear-all-btn" onClick={() => setCodeFiles([])}>
+                  Clear All
+                </button>
+              </div>
+              <div className="file-list">
+                {codeFiles.map((f, i) => (
+                  <div key={`code_${f.name}_${i}`} className="file-list-item">
+                    <span className="file-list-icon">{"\uD83D\uDCBB"}</span>
+                    <span className="file-list-name">{f.name}</span>
+                    <span className="file-list-size">{formatFileSize(f.size)}</span>
+                    <button
+                      type="button"
+                      className="file-remove-btn"
+                      onClick={() => removeCodeFile(i)}
+                      title="Remove file"
+                    >
+                      x
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
         <button type="submit" className="submit-btn" disabled={loading || files.length === 0}>
           {loading ? `Analyzing ${files.length} resumes...` : `Analyze ${files.length || ""} Resume${files.length !== 1 ? "s" : ""}`}
         </button>
@@ -225,6 +344,12 @@ function BatchUpload() {
 
       {result && (
         <div className="batch-results">
+          <div className="batch-results-header">
+            <h3 className="batch-results-title">Batch Results</h3>
+            <button type="button" className="clear-results-btn" onClick={clearResults}>
+              Clear Results
+            </button>
+          </div>
           <div className="batch-summary">
             <span className="batch-stat">Analyzed: <strong>{result.total_analyzed}</strong></span>
             <span className="batch-stat">Errors: <strong>{result.total_errors}</strong></span>
@@ -252,6 +377,19 @@ function BatchUpload() {
               setTimeout(() => URL.revokeObjectURL(url), 1000);
               showToast("Batch CSV exported!", "success");
             }}>Export CSV</button>
+            <button
+              type="button"
+              className="clear-results-btn"
+              onClick={() => {
+                setResult(null);
+                setError("");
+                setFiles([]);
+                setCodeFiles([]);
+                showToast("Batch results cleared.", "info");
+              }}
+            >
+              Clear Results
+            </button>
           </div>
           {/* AI Executive Report for Recruiters */}
           {result.ai_executive_report && (
@@ -275,6 +413,14 @@ function BatchUpload() {
                 <p className="hiring-advice"><strong>Advice:</strong> {result.ai_executive_report.hiring_advice}</p>
               )}
             </div>
+          )}
+
+          {/* Code Quality Analysis Results */}
+          {result.code_quality && result.code_quality.aggregate && (
+            <CodeQualityResults
+              scores={result.code_quality.aggregate}
+              title="Batch Code Quality Analysis"
+            />
           )}
 
           <RankingTable rankings={result.rankings} />

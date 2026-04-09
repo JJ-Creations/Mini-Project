@@ -26,7 +26,6 @@
 
 /* --- Drag & Drop Zone --- */
 .batch-drop-zone {
-  width: 100%;
   padding: var(--space-8) var(--space-5);
   border: 2px dashed var(--border-light);
   border-radius: var(--radius-lg);
@@ -206,6 +205,37 @@
   margin-top: var(--space-6);
 }
 
+.batch-results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.batch-results-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.clear-results-btn {
+  background: none;
+  border: 1px solid #dc2626;
+  color: #dc2626;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.clear-results-btn:hover {
+  background: #dc2626;
+  color: #fff;
+}
+
 .batch-summary {
   display: flex;
   gap: var(--space-6);
@@ -276,4 +306,26 @@
   border-radius: var(--radius-sm);
   margin-bottom: 6px;
   font-size: 0.85rem;
+}
+
+/* --- Code Files Upload Zone --- */
+.batch-code-drop-zone {
+  border-color: #8b5cf6;
+}
+
+.batch-code-drop-zone:hover,
+.batch-code-drop-zone.dragging {
+  border-color: #7c3aed;
+  background: rgba(139, 92, 246, 0.05);
+}
+
+.batch-code-desc {
+  font-size: 0.88rem;
+  color: var(--text-gray);
+  margin-bottom: 8px;
+}
+
+[data-theme="dark"] .batch-code-drop-zone:hover,
+[data-theme="dark"] .batch-code-drop-zone.dragging {
+  background: rgba(139, 92, 246, 0.1);
 }

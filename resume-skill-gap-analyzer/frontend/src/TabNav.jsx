@@ -9,51 +9,71 @@ const ALL_TABS = [
   { id: "compare", label: "Compare", icon: "\u2696\uFE0F", roles: ["recruiter"] },
   { id: "jd-parser", label: "JD Parser", icon: "\uD83D\uDCCB", roles: ["candidate", "recruiter"] },
   { id: "dashboard", label: "Dashboard", icon: "\uD83D\uDCCA", roles: ["candidate", "recruiter"] },
+  { id: "history", label: "History", icon: "\uD83D\uDD52", roles: ["candidate", "recruiter"] },
 ];
 
 export function getVisibleTabs(role) {
   return ALL_TABS.filter((tab) => tab.roles.includes(role));
 }
 
-function TabNav({ activeTab, onTabChange }) {
-  const { userRole, logout } = useUserRole();
+function TabNav({ activeTab, onTabChange, darkMode, toggleDarkMode }) {
+  const { userRole, switchRole } = useUserRole();
   const visibleTabs = getVisibleTabs(userRole);
 
   return (
-    <nav className="navbar">
-      <div className="navbar-inner">
-        <div className="navbar-links">
-          {visibleTabs.map((tab) => (
-            <a
-              key={tab.id}
-              href={"#" + tab.id}
-              className={`navbar-link ${activeTab === tab.id ? "active" : ""}`}
-              onClick={(e) => {
-                e.preventDefault();
-                onTabChange(tab.id);
-              }}
+    <header className="unified-header">
+      {/* Brand row */}
+      <div className="header-brand">
+        <div className="header-brand-inner">
+          <div className="brand-mark">
+            <span className="brand-icon">{"\u25C6"}</span>
+            <span className="brand-name">SkillSync</span>
+          </div>
+          <div className="header-controls">
+            <span className={`role-badge role-badge-${userRole}`}>
+              {userRole === "candidate" ? "Candidate" : "Recruiter"}
+            </span>
+            <button className="switch-role-btn" onClick={switchRole} title="Switch Role">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+              Switch
+            </button>
+            <button
+              className="theme-toggle-btn"
+              onClick={toggleDarkMode}
+              title={darkMode ? "Light Mode" : "Dark Mode"}
             >
-              <span className="navbar-link-icon">{tab.icon}</span>
-              {tab.label}
-            </a>
-          ))}
-        </div>
-
-        <div className="navbar-right">
-          <span className={`role-badge role-badge-${userRole}`}>
-            {userRole === "candidate" ? "Candidate" : "Recruiter"}
-          </span>
-          <button className="switch-role-btn" onClick={logout} title="Switch Role">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-            Switch Role
-          </button>
+              {darkMode ? "\u2600\uFE0F" : "\uD83C\uDF19"}
+            </button>
+          </div>
         </div>
       </div>
-    </nav>
+
+      {/* Nav row */}
+      <nav className="header-nav">
+        <div className="header-nav-inner">
+          <div className="navbar-links">
+            {visibleTabs.map((tab) => (
+              <a
+                key={tab.id}
+                href={"#" + tab.id}
+                className={`navbar-link ${activeTab === tab.id ? "active" : ""}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  onTabChange(tab.id);
+                }}
+              >
+                <span className="navbar-link-icon">{tab.icon}</span>
+                {tab.label}
+              </a>
+            ))}
+          </div>
+        </div>
+      </nav>
+    </header>
   );
 }
 
